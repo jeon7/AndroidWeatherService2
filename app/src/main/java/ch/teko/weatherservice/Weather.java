@@ -13,10 +13,6 @@ public class Weather {
         this.air_temperature = air_temperature;
     }
 
-    public String getStation() {
-        return station;
-    }
-
     public String getTime_stamp_cet() {
         return time_stamp_cet;
     }
@@ -29,8 +25,8 @@ public class Weather {
     @Override
     public String toString() {
         String weatherSting = "station: " + station +
-                "\n time_stamp_cet: " + time_stamp_cet +
-                "\n air_temperature: " + air_temperature;
+                "\ntime_stamp_cet: " + time_stamp_cet +
+                "\nair_temperature: " + air_temperature;
         return weatherSting;
     }
 }

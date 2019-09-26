@@ -20,29 +20,27 @@ public class WeatherAPI {
 
     public static Weather fetchWeather() {
         Weather latestWeatherObj = null;
-        if (ConnectivityReceiver.isConnected()) {
-            try {
-                URL url = new URL(URL_API);
-                HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-                connection.setConnectTimeout(1000);
-                BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(connection.getInputStream()));
+        try {
+            URL url = new URL(URL_API);
+            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+            connection.setConnectTimeout(1000);
+            BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(connection.getInputStream()));
 
-                StringBuffer buffer = new StringBuffer();
-                String line;
-                while ((line = bufferedReader.readLine()) != null) {
-                    buffer.append(line);
-                }
-                String responseJSON = buffer.toString();
-                Log.d(LOG_TAG, responseJSON);
-
-                latestWeatherObj = getParsedJSONElements(responseJSON);
-            } catch (MalformedURLException e) {
-                e.printStackTrace();
-            } catch (ConnectException e) {
-                e.printStackTrace();
-            } catch (IOException e) {
-                e.printStackTrace();
+            StringBuffer buffer = new StringBuffer();
+            String line;
+            while ((line = bufferedReader.readLine()) != null) {
+                buffer.append(line);
             }
+            String responseJSON = buffer.toString();
+            Log.d(LOG_TAG, responseJSON);
+
+            latestWeatherObj = getParsedJSONElements(responseJSON);
+        } catch (MalformedURLException e) {
+            e.printStackTrace();
+        } catch (ConnectException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
         }
         return latestWeatherObj;
     }

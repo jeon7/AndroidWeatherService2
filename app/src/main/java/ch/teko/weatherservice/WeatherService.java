@@ -11,12 +11,14 @@ import java.util.TimerTask;
 
 public class WeatherService extends Service {
 
-    private boolean serviceOn = false;
-    private boolean serviceBound = false;
+    private static boolean serviceBound = false;
+    private Timer taskScheduler;
+    private static final long TASK_DELAY = 1000;
+    private static final long TASK_PERIOD = 5000;
     private static final String LOG_TAG = "WeatherService";
 
     public WeatherService() {
-        Log.d(LOG_TAG, "constructor called, new WeatherThread created");
+        Log.d(LOG_TAG, "constructor called");
     }
 
     @Override
@@ -35,24 +37,6 @@ public class WeatherService extends Service {
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         Log.d(LOG_TAG, "onStartCommand() called");
-        serviceOn = true;
-
-        //todo: test
-        TimerTask scheduledTask = new TimerTask() {
-            @Override
-            public void run() {
-                // todo
-            }
-        };
-        Timer taskScheduler = new Timer();
-        taskScheduler.scheduleAtFixedRate(scheduledTask, 1000, 3000);
-        try {
-            Thread.sleep(20000);
-        } catch(InterruptedException ex) {
-            //
-        }
-        taskScheduler.cancel();
-
 
         return super.onStartCommand(intent, flags, startId);
     }
@@ -60,13 +44,14 @@ public class WeatherService extends Service {
     @Override
     public void onDestroy() {
         Log.d(LOG_TAG, "onDestroy() called");
-        super.onDestroy();
-        serviceOn = false;
+        taskScheduler.cancel();
         serviceBound = false;
+        super.onDestroy();
     }
 
-    public boolean isServiceOn() {
-        return serviceOn;
+    public void setScheduledTask (TimerTask scheduledTask) {
+        taskScheduler = new Timer();
+        taskScheduler.scheduleAtFixedRate(scheduledTask, TASK_DELAY, TASK_PERIOD);
     }
 
     public boolean isServiceBound() {
