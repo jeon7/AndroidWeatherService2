@@ -36,7 +36,7 @@ public class MainActivity extends AppCompatActivity {
     private ConnectivityReceiver connectivityReceiver;
 
     private static Weather latestWeatherObj = null;
-    private String lastTempDiff;
+    private String tempDiff;
     private String tempLastChecked;
     private String timeLastChecked;
     private SharedPreferences sharedPreferences;
@@ -117,15 +117,14 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void updateTempDiff() {
-        lastTempDiff = et_temp_diff.getText().toString();
-        // if user input has new value
-        if (sharedPreferences.getString(SHARED_PREFERENCE_TEMP_DIFF, "") != lastTempDiff) {
+        tempDiff = et_temp_diff.getText().toString();
+        // if user input (temperature diffrences) has new value
+        if (sharedPreferences.getString(SHARED_PREFERENCE_TEMP_DIFF, "") != tempDiff) {
             SharedPreferences.Editor editor;
             editor = sharedPreferences.edit();
-            editor.putString(SHARED_PREFERENCE_TEMP_DIFF, lastTempDiff);
+            editor.putString(SHARED_PREFERENCE_TEMP_DIFF, tempDiff);
             editor.commit();
         }
-
     }
 
     @Override
@@ -133,17 +132,24 @@ public class MainActivity extends AppCompatActivity {
         Log.d(LOG_TAG, "onResume() called");
         super.onResume();
 
-//        initial internet connection status display
+//        initial status display
         if (ConnectivityReceiver.isConnected()) {
             tv_status_internet.setText("connected to Internet");
         } else {
             tv_status_internet.setText("no Internet");
+        }
+
+        if (service != null) {
+            tv_status_service.setText("Service is on");
+        } else {
+            tv_status_service.setText("Service is off");
         }
     }
 
     @Override
     protected void onStop() {
         Log.d(LOG_TAG, "onStop() called");
+//        todo: what is voherige temperatur?
         if(latestWeatherObj != null) {
             tempLastChecked = latestWeatherObj.getAir_temperature();
             timeLastChecked = latestWeatherObj.getTime_stamp_cet();
@@ -156,12 +162,11 @@ public class MainActivity extends AppCompatActivity {
         Log.d(LOG_TAG, "onDestroy() called");
         super.onDestroy();
 
-//        todo: service ends when Activity-onDestroy() called
-//        ??connectivityReceiver doesn't receive broadcast message after Activity-onDestroy().
         if (service.isServiceBound()) {
             unbindService(serviceConnection);
         }
-        stopService(serviceIntent);
+//        todo: service ends when Activity-onDestroy() called??
+//        stopService(serviceIntent);
         unregisterReceiver(connectivityReceiver);
     }
 
@@ -180,27 +185,32 @@ public class MainActivity extends AppCompatActivity {
             service = ((WeatherService.LocalBinder) iBinder).getService();
 
             if (service.isServiceBound()) {
-                tv_status_service.setText("Service On");
-                service.setScheduledTask(new TimerTask() {
-                    @Override
-                    public void run() {
-                        latestWeatherObj = WeatherAPI.fetchWeather();
-                        runOnUiThread(new Runnable() {
-                            @Override
-                            public void run() {
-                                if (latestWeatherObj == null) {
-                                    Toast.makeText(getApplicationContext(), "check the Weather API website", Toast.LENGTH_SHORT).show();
-                                } else {
-                                    tv_note.setText(latestWeatherObj.toString());
-                                }
-                            }
-                        });
-                        Log.d(LOG_TAG, latestWeatherObj.toString());
-                    }
-                });
+                startScheduledTask();
             } else {
                 tv_status_service.setText("Hey, Something is wrong.");
             }
+        }
+
+        private void startScheduledTask() {
+            tv_status_service.setText("Service On");
+            service.setScheduledTask(new TimerTask() {
+                @Override
+                public void run() {
+                    latestWeatherObj = WeatherAPI.fetchWeather();
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            if (latestWeatherObj == null) {
+                                Toast.makeText(getApplicationContext(),
+                                        "check the Weather API website, it may not work", Toast.LENGTH_SHORT).show();
+                            } else {
+                                tv_note.setText(latestWeatherObj.toString());
+                            }
+                        }
+                    });
+                    Log.d(LOG_TAG, latestWeatherObj.toString());
+                }
+            });
         }
 
         // todo: never called, why?
@@ -209,5 +219,7 @@ public class MainActivity extends AppCompatActivity {
             Log.d(LOG_TAG, "onServiceDisconnected() called");
             service = null;
         }
+
+
     }
 }
