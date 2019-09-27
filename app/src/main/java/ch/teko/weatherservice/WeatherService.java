@@ -25,6 +25,8 @@ public class WeatherService extends Service {
     public void onCreate() {
         Log.d(LOG_TAG, "onCreate() called");
         super.onCreate();
+        WeatherNotification.configureNotification(getApplicationContext());
+        WeatherNotification.createNotificationChannel(getApplicationContext());
     }
 
     @Override
@@ -37,7 +39,6 @@ public class WeatherService extends Service {
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         Log.d(LOG_TAG, "onStartCommand() called");
-
         return super.onStartCommand(intent, flags, startId);
     }
 

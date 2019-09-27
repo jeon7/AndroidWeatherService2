@@ -73,7 +73,7 @@ public class MainActivity extends AppCompatActivity {
             public void onClick(View view) {
                 et_temp_diff.clearFocus();
                 if (ConnectivityReceiver.isConnected()) {
-                    if(et_temp_diff.getText().toString().equals("")) {
+                    if (et_temp_diff.getText().toString().equals("")) {
                         Toast.makeText(getApplicationContext(), "type temperature difference first", Toast.LENGTH_SHORT).show();
                     } else {
                         startService(serviceIntent);
@@ -101,6 +101,7 @@ public class MainActivity extends AppCompatActivity {
                         Toast.makeText(getApplicationContext(), "Service is already Off", Toast.LENGTH_SHORT).show();
                     }
                     stopService(serviceIntent);
+                    service = null;
                 }
             }
         });
@@ -118,7 +119,7 @@ public class MainActivity extends AppCompatActivity {
 
     private void updateTempDiff() {
         tempDiff = et_temp_diff.getText().toString();
-        // if user input (temperature diffrences) has new value
+        // if user input (temperature differences) has new value
         if (sharedPreferences.getString(SHARED_PREFERENCE_TEMP_DIFF, "") != tempDiff) {
             SharedPreferences.Editor editor;
             editor = sharedPreferences.edit();
@@ -150,7 +151,7 @@ public class MainActivity extends AppCompatActivity {
     protected void onStop() {
         Log.d(LOG_TAG, "onStop() called");
 //        todo: what is voherige temperatur?
-        if(latestWeatherObj != null) {
+        if (latestWeatherObj != null) {
             tempLastChecked = latestWeatherObj.getAir_temperature();
             timeLastChecked = latestWeatherObj.getTime_stamp_cet();
         }
@@ -183,12 +184,7 @@ public class MainActivity extends AppCompatActivity {
         public void onServiceConnected(ComponentName componentName, IBinder iBinder) {
             Log.d(LOG_TAG, "onServiceConnected() called");
             service = ((WeatherService.LocalBinder) iBinder).getService();
-
-            if (service.isServiceBound()) {
-                startScheduledTask();
-            } else {
-                tv_status_service.setText("Hey, Something is wrong.");
-            }
+            startScheduledTask();
         }
 
         private void startScheduledTask() {
@@ -209,17 +205,21 @@ public class MainActivity extends AppCompatActivity {
                         }
                     });
                     Log.d(LOG_TAG, latestWeatherObj.toString());
+
+//                    todo notification test
+                    if (latestWeatherObj.getTime_stamp_cet().equals("27.09.2019 20:00:00")) {
+                        WeatherNotification.runNotification(getApplicationContext());
+                    }
+
                 }
             });
         }
 
-        // todo: never called, why?
+        // so far never called, onServiceDisconnected() is only called in extreme situations
         @Override
         public void onServiceDisconnected(ComponentName componentName) {
             Log.d(LOG_TAG, "onServiceDisconnected() called");
             service = null;
         }
-
-
     }
 }
