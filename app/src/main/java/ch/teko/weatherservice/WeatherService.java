@@ -11,13 +11,13 @@ import java.util.TimerTask;
 
 public class WeatherService extends Service {
 
-    private Handler handler;
+    private static final String LOG_TAG = "WeatherService";
     private static boolean serviceStarted = false;
-    private static Timer taskScheduler;
+    private Handler handler;
+    private Timer taskScheduler;
     private static final long TASK_DELAY = 1000;
     private static final long TASK_PERIOD = 5000;
-    private static final String LOG_TAG = "WeatherService";
-    private static Weather latestWeatherObj = null;
+    private Weather latestWeatherObj = null;
 
     public WeatherService() {
         Log.d(LOG_TAG, "constructor called");
@@ -40,14 +40,27 @@ public class WeatherService extends Service {
     @Override
     public int onStartCommand(final Intent intent, int flags, int startId) {
         Log.d(LOG_TAG, "onStartCommand() called");
-        serviceStarted = true;
 
-        handler.post(new Runnable() {
-            @Override
-            public void run() {
-                MainActivity.setUI();
-            }
-        });
+        if(intent == null) {
+            return Service.START_STICKY;
+        } else {
+            serviceStarted = true;
+            handler.post(new Runnable() {
+                @Override
+                public void run() {
+                    MainActivity.setUI();
+                }
+            });
+            processScheduledTask(intent);
+            return super.onStartCommand(intent, flags, startId);
+        }
+    }
+
+    private void processScheduledTask(Intent intent) {
+
+        String tempDiff = intent.getStringExtra("main_temp_diff");
+        Log.d(LOG_TAG, "tempDiff = " + tempDiff);
+
 
         setScheduledTask(new TimerTask() {
             @Override
@@ -56,7 +69,6 @@ public class WeatherService extends Service {
                     this.cancel();
                 }
                 if (!ConnectivityReceiver.isConnected()) {
-                    // todo how to stop timertask?
                     this.cancel();
                     stopSelf();
                     // todo notify user
@@ -64,12 +76,9 @@ public class WeatherService extends Service {
                     latestWeatherObj = WeatherAPI.fetchWeather();
                     if (latestWeatherObj == null) {
                         Log.d(LOG_TAG, "check the Weather API website, it may not work at the moment");
-//                        todo
-//                        Toast.makeText(getApplicationContext(),
-//                                "check the Weather API website, it may not work", Toast.LENGTH_SHORT).show();
                     } else {
                         Log.d(LOG_TAG, latestWeatherObj.toString());
-//                        todo
+//                         todo add calculation
 //                        Toast.makeText(getApplicationContext(),
 //                                latestWeatherObj.toString(), Toast.LENGTH_SHORT).show();
                     }
@@ -81,7 +90,6 @@ public class WeatherService extends Service {
 
             }
         });
-        return super.onStartCommand(intent, flags, startId);
     }
 
     @Override

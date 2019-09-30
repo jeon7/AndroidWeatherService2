@@ -9,6 +9,7 @@ import android.os.IBinder;
 import android.util.Log;
 
 public class ConnectivityService extends Service {
+
     private static final String LOG_TAG = "ConnectivityService";
     private ConnectivityReceiver connectivityReceiver;
 

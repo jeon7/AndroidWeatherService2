@@ -10,18 +10,13 @@ import android.os.Handler;
 
 public class ConnectivityReceiver extends BroadcastReceiver {
 
-    private final Handler handler;
-    private static boolean connected = false;
     private static final String LOG_TAG = "ConnectivityReceiver";
+    private static boolean connected = false;
+    private final Handler handler;
 
     public ConnectivityReceiver(Handler handler) {
         this.handler = handler;
     }
-
-//    public void init(Context context){
-//        Log.d(LOG_TAG, "init() called");
-//        connected = isNetworkInterfaceAvailable(context);
-//    }
 
     @Override
     public void onReceive(Context context, Intent intent) {
@@ -37,8 +32,6 @@ public class ConnectivityReceiver extends BroadcastReceiver {
                         MainActivity.setUI();
                     }
                 });
-
-
             }
         } catch (Exception e) {
             e.printStackTrace();

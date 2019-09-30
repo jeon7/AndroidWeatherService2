@@ -17,21 +17,19 @@ import android.widget.Toast;
 
 public class MainActivity extends AppCompatActivity {
 
+    private static final String LOG_TAG = "MainActivity";
+    private static final String SHARED_PREFERENCE_TEMP_DIFF = "user_last_saved_temp_diff";
+
     private static TextView tv_status_internet;
     private static TextView tv_status_service;
     private static TextView tv_note;
-    private static EditText et_temp_diff;
     private static Button btnStartService;
     private static Button btnEndService;
-
+    private EditText et_temp_diff;
     private Intent weatherServiceIntent;
-    private Intent connectivityServiceIntent;
 
     private String tempDiff;
     private SharedPreferences sharedPreferences;
-    private static final String SHARED_PREFERENCE_TEMP_DIFF = "user_last_saved_temp_diff";
-
-    private static final String LOG_TAG = "MainActivity";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -57,7 +55,7 @@ public class MainActivity extends AppCompatActivity {
         // ConnectivityService will register connectivityBroadcastReceiver
         // this should be always running even before weather service started
         // in order to display internet connectivity
-        connectivityServiceIntent = new Intent(getApplicationContext(), ConnectivityService.class);
+        Intent connectivityServiceIntent = new Intent(getApplicationContext(), ConnectivityService.class);
         startService(connectivityServiceIntent);
 
         // hide keyboard when not focused on editText
@@ -75,13 +73,15 @@ public class MainActivity extends AppCompatActivity {
         Log.d(LOG_TAG, "onButtonStartServiceClicked() called");
         et_temp_diff.clearFocus();
         if (ConnectivityReceiver.isConnected()) {
-            if (et_temp_diff.getText().toString().equals("")) {
+            tempDiff = et_temp_diff.getText().toString();
+            if (tempDiff.equals("")) {
                 Toast.makeText(getApplicationContext(),
                         "type temperature difference first for notification", Toast.LENGTH_SHORT).show();
             } else {
+                checkUpdateTempDiff();
                 weatherServiceIntent = new Intent(this, WeatherService.class);
+                weatherServiceIntent.putExtra("main_temp_diff", tempDiff);
                 startService(weatherServiceIntent);
-                updateUserInputTempDiff();
             }
         } else {
             Toast.makeText(getApplicationContext(),
@@ -99,8 +99,7 @@ public class MainActivity extends AppCompatActivity {
         Log.d(LOG_TAG, "isServiceStarted()=" + WeatherService.isServiceStarted());
     }
 
-    private void updateUserInputTempDiff() {
-        tempDiff = et_temp_diff.getText().toString();
+    private void checkUpdateTempDiff() {
         // if user input (temperature differences) has new value
         if (sharedPreferences.getString(SHARED_PREFERENCE_TEMP_DIFF, "") != tempDiff) {
             SharedPreferences.Editor editor;
@@ -117,6 +116,7 @@ public class MainActivity extends AppCompatActivity {
         setUI();
     }
 
+    // called from MainActivity, ConnectivityReceiver, WeatherService
     protected static void setUI() {
         Log.d(LOG_TAG, "setUI() called");
         // internet status

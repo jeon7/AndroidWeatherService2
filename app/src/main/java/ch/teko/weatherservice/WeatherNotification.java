@@ -13,12 +13,12 @@ import androidx.core.app.NotificationManagerCompat;
 
 public class WeatherNotification {
 
+    private static final String LOG_TAG = "WeatherNotification";
     private static final String NOTIFICATION_CHANNEL_ID = "temp_fluctuation";
     private static final String NOTIFICATION_CONTENT_TITEL = "Temperatur Fluctuation";
-    private static String NOTIFICATION_CONTENT_TEXT = "Temperatur Fluctuation over "; // todo
-    private static int NOTIFICATION_ID = 100;
+    private static final String NOTIFICATION_CONTENT_TEXT = "Temperatur Fluctuation over "; // todo
+    private static final int NOTIFICATION_ID = 100;
     private static NotificationCompat.Builder builder;
-    private static final String LOG_TAG = "WeatherNotification";
 
     public static void configureNotification(Context context) {
         Log.d(LOG_TAG, "configureNotification() called ");
