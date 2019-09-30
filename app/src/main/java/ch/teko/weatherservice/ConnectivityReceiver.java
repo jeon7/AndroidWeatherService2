@@ -31,21 +31,13 @@ public class ConnectivityReceiver extends BroadcastReceiver {
                 connected = isNetworkInterfaceAvailable(context);
                 Log.d(LOG_TAG, "connected = " + connected);
 
-                if (connected == true) {
-                    handler.post(new Runnable() {
-                        @Override
-                        public void run() {
-                            MainActivity.tv_status_internet.setText("Connected to Internet");
-                        }
-                    });
-                } else {
-                    handler.post(new Runnable() {
-                        @Override
-                        public void run() {
-                            MainActivity.tv_status_internet.setText("No Internet");
-                        }
-                    });
-                }
+                handler.post(new Runnable() {
+                    @Override
+                    public void run() {
+                        MainActivity.setUI();
+                    }
+                });
+
 
             }
         } catch (Exception e) {

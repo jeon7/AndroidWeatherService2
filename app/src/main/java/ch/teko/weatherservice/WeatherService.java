@@ -2,22 +2,18 @@ package ch.teko.weatherservice;
 
 import android.app.Service;
 import android.content.Intent;
-import android.content.IntentFilter;
-import android.net.ConnectivityManager;
-import android.os.Binder;
 import android.os.Handler;
 import android.os.IBinder;
 import android.util.Log;
-import android.widget.Toast;
 
 import java.util.Timer;
 import java.util.TimerTask;
 
 public class WeatherService extends Service {
 
-
+    private Handler handler;
     private static boolean serviceStarted = false;
-    private Timer taskScheduler;
+    private static Timer taskScheduler;
     private static final long TASK_DELAY = 1000;
     private static final long TASK_PERIOD = 5000;
     private static final String LOG_TAG = "WeatherService";
@@ -30,16 +26,15 @@ public class WeatherService extends Service {
     @Override
     public void onCreate() {
         Log.d(LOG_TAG, "onCreate() called");
-        super.onCreate();
-
+        handler = new Handler();
         WeatherNotification.configureNotification(getApplicationContext());
         WeatherNotification.createNotificationChannel(getApplicationContext());
+        super.onCreate();
     }
 
     @Override
     public IBinder onBind(Intent intent) {
-        Log.d(LOG_TAG, "onBind() called");
-        return new LocalBinder(this);
+        return null;
     }
 
     @Override
@@ -47,27 +42,38 @@ public class WeatherService extends Service {
         Log.d(LOG_TAG, "onStartCommand() called");
         serviceStarted = true;
 
+        handler.post(new Runnable() {
+            @Override
+            public void run() {
+                MainActivity.setUI();
+            }
+        });
+
         setScheduledTask(new TimerTask() {
             @Override
             public void run() {
-                if (!ConnectivityReceiver.isConnected()) {
-                    stopService(intent);
+                if (!isServiceStarted()) {
                     this.cancel();
+                }
+                if (!ConnectivityReceiver.isConnected()) {
+                    // todo how to stop timertask?
+                    this.cancel();
+                    stopSelf();
                     // todo notify user
                 } else {
                     latestWeatherObj = WeatherAPI.fetchWeather();
                     if (latestWeatherObj == null) {
+                        Log.d(LOG_TAG, "check the Weather API website, it may not work at the moment");
 //                        todo
-                        Toast.makeText(getApplicationContext(),
-                                "check the Weather API website, it may not work", Toast.LENGTH_SHORT).show();
+//                        Toast.makeText(getApplicationContext(),
+//                                "check the Weather API website, it may not work", Toast.LENGTH_SHORT).show();
                     } else {
+                        Log.d(LOG_TAG, latestWeatherObj.toString());
 //                        todo
-                        Toast.makeText(getApplicationContext(),
-                                latestWeatherObj.toString(), Toast.LENGTH_SHORT).show();
+//                        Toast.makeText(getApplicationContext(),
+//                                latestWeatherObj.toString(), Toast.LENGTH_SHORT).show();
                     }
-                    Log.d(LOG_TAG, latestWeatherObj.toString());
                 }
-
 //                    todo notification test
                 if (latestWeatherObj.getTime_stamp_cet().equals("27.09.2019 20:00:00")) {
                     WeatherNotification.runNotification(getApplicationContext());
@@ -83,6 +89,13 @@ public class WeatherService extends Service {
         Log.d(LOG_TAG, "onDestroy() called");
         taskScheduler.cancel();
         serviceStarted = false;
+
+        handler.post(new Runnable() {
+            @Override
+            public void run() {
+                MainActivity.setUI();
+            }
+        });
         super.onDestroy();
     }
 
@@ -93,20 +106,5 @@ public class WeatherService extends Service {
 
     public static boolean isServiceStarted() {
         return serviceStarted;
-    }
-
-    public class LocalBinder extends Binder {
-        private WeatherService service;
-        private static final String LOG_TAG = "LocalBinder";
-
-        public LocalBinder(WeatherService service) {
-            Log.d(LOG_TAG, "constructor called, parameter service saved to LocalBinder field service");
-            this.service = service;
-        }
-
-        public WeatherService getService() {
-            Log.d(LOG_TAG, "getService() called");
-            return service;
-        }
     }
 }
