@@ -4,7 +4,7 @@
     <string name="btn_end_service" translatable="false">End Service</string>
     <string name="tv_temp_diff" translatable="false">Temperature Differences:</string>
     <string name="tv_service_status" translatable="false">Service Status:</string>
-    <string name="et_temp_diff_hint" translatable="false">Number in Celsius</string>
+    <string name="et_temp_diff_hint" translatable="false">Decimal in Celsius</string>
     <string name="channel_name" translatable="false">weather_notification</string>
     <string name="channel_description" translatable="false">Notify user by temperatur fluctation</string>
 </resources>

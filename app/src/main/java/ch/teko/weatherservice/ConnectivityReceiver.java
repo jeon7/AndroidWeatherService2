@@ -18,10 +18,10 @@ public class ConnectivityReceiver extends BroadcastReceiver {
         this.handler = handler;
     }
 
-    public void init(Context context){
-        Log.d(LOG_TAG, "init() called");
-        connected = isNetworkInterfaceAvailable(context);
-    }
+//    public void init(Context context){
+//        Log.d(LOG_TAG, "init() called");
+//        connected = isNetworkInterfaceAvailable(context);
+//    }
 
     @Override
     public void onReceive(Context context, Intent intent) {

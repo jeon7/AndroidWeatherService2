@@ -6,12 +6,9 @@ import android.app.Activity;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
-import android.content.IntentFilter;
 import android.content.ServiceConnection;
 import android.content.SharedPreferences;
-import android.net.ConnectivityManager;
 import android.os.Bundle;
-import android.os.Handler;
 import android.os.IBinder;
 import android.util.Log;
 import android.view.View;
@@ -21,21 +18,20 @@ import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import java.util.TimerTask;
-
 public class MainActivity extends AppCompatActivity {
 
     public static TextView tv_status_internet;
     private TextView tv_status_service;
     private TextView tv_note;
     private EditText et_temp_diff;
+    private Button btnStartService;
+    private Button btnEndService;
 
-    private WeatherService service;
-    private Intent serviceIntent;
-    private ServiceConnection serviceConnection;
-    private ConnectivityReceiver connectivityReceiver;
+    private WeatherService weatherService;
+    private Intent weatherServiceIntent;
+    private ServiceConnection weatherServiceConnection;
+    private Intent connectivityServiceIntent;
 
-    private static Weather latestWeatherObj = null;
     private String tempDiff;
     private String tempLastChecked;
     private String timeLastChecked;
@@ -50,59 +46,66 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        serviceIntent = new Intent(this, WeatherService.class);
-        serviceConnection = new WeatherServiceConnection();
+        // to remember user input (temperature difference)
+        sharedPreferences = getPreferences(Context.MODE_PRIVATE);
+        String spLastValue = sharedPreferences.getString(SHARED_PREFERENCE_TEMP_DIFF, "");
 
-        connectivityReceiver = new ConnectivityReceiver(new Handler());
-        IntentFilter receiverFilter = new IntentFilter(ConnectivityManager.CONNECTIVITY_ACTION);
-        registerReceiver(connectivityReceiver, receiverFilter);
+        // show last user saved temperature difference
+        et_temp_diff = findViewById(R.id.editText_temperature_diff);
+        et_temp_diff.setText(spLastValue);
 
         tv_status_internet = findViewById(R.id.tv_status_internet);
         tv_status_service = findViewById(R.id.tv_status_service);
         tv_note = findViewById(R.id.tv_note);
-        et_temp_diff = findViewById(R.id.editText_temperature_diff);
 
-        sharedPreferences = getPreferences(Context.MODE_PRIVATE);
-        String spLastValue = sharedPreferences.getString(SHARED_PREFERENCE_TEMP_DIFF, "");
-        // show last user saved temperature difference
-        et_temp_diff.setText(spLastValue);
+        btnStartService = findViewById(R.id.button_start_service);
+        btnEndService = findViewById(R.id.button_end_service);
 
-        Button btnStartService = findViewById(R.id.button_start_service);
+        // ConnectivityService will register connectivityBroadcastReceiver
+        // this should be always running even before weather service started
+        // in order to display internet connectivity
+        connectivityServiceIntent = new Intent(getApplicationContext(), ConnectivityService.class);
+        startService(connectivityServiceIntent);
+
+
         btnStartService.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
                 et_temp_diff.clearFocus();
+                btnStartService.setEnabled(false);
+                btnEndService.setEnabled(true);
                 if (ConnectivityReceiver.isConnected()) {
                     if (et_temp_diff.getText().toString().equals("")) {
-                        Toast.makeText(getApplicationContext(), "type temperature difference first", Toast.LENGTH_SHORT).show();
+                        Toast.makeText(getApplicationContext(), "type temperature difference first for notification", Toast.LENGTH_SHORT).show();
                     } else {
-                        startService(serviceIntent);
-                        bindService(serviceIntent, serviceConnection, Context.BIND_AUTO_CREATE);
+                        weatherServiceIntent = new Intent(getApplicationContext(), WeatherService.class);
+                        startService(weatherServiceIntent);
+                        weatherServiceConnection = new WeatherServiceConnection();
+                        bindService(weatherServiceIntent, weatherServiceConnection, Context.BIND_AUTO_CREATE);
                         updateTempDiff();
                     }
                 } else {
                     Toast.makeText(getApplicationContext(), "check internet connection", Toast.LENGTH_SHORT).show();
                 }
+                setUI();
             }
         });
 
-        Button btnEndService = findViewById(R.id.button_end_service);
         btnEndService.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
+                btnEndService.setEnabled(false);
+                btnStartService.setEnabled(true);
 
-                if (service == null) {
-                    Toast.makeText(getApplicationContext(), "Start Service first", Toast.LENGTH_SHORT).show();
-                } else {
-                    if (service.isServiceBound()) {
-                        unbindService(serviceConnection);
-                        tv_status_service.setText("Service Off");
-                    } else {
-                        Toast.makeText(getApplicationContext(), "Service is already Off", Toast.LENGTH_SHORT).show();
-                    }
-                    stopService(serviceIntent);
-                    service = null;
+                if (weatherService != null) {
+                    unbindService(weatherServiceConnection);
+                    weatherService = null;
                 }
+
+                if (WeatherService.isServiceStarted()) {
+                    stopService(weatherServiceIntent);
+                }
+                setUI();
             }
         });
 
@@ -132,29 +135,37 @@ public class MainActivity extends AppCompatActivity {
     protected void onResume() {
         Log.d(LOG_TAG, "onResume() called");
         super.onResume();
+        setUI();
 
-//        initial status display
+    }
+
+    private void setUI() {
+        // internet status
         if (ConnectivityReceiver.isConnected()) {
             tv_status_internet.setText("connected to Internet");
         } else {
             tv_status_internet.setText("no Internet");
         }
-
-        if (service != null) {
+        // service status
+        if (WeatherService.isServiceStarted()) {
             tv_status_service.setText("Service is on");
         } else {
             tv_status_service.setText("Service is off");
+        }
+
+        // buttons
+        if (WeatherService.isServiceStarted()) {
+            btnStartService.setEnabled(false);
+            btnEndService.setEnabled(true);
+        } else {
+            btnStartService.setEnabled(true);
+            btnEndService.setEnabled(false);
         }
     }
 
     @Override
     protected void onStop() {
         Log.d(LOG_TAG, "onStop() called");
-//        todo: what is voherige temperatur?
-        if (latestWeatherObj != null) {
-            tempLastChecked = latestWeatherObj.getAir_temperature();
-            timeLastChecked = latestWeatherObj.getTime_stamp_cet();
-        }
         super.onStop();
     }
 
@@ -163,12 +174,10 @@ public class MainActivity extends AppCompatActivity {
         Log.d(LOG_TAG, "onDestroy() called");
         super.onDestroy();
 
-        if (service.isServiceBound()) {
-            unbindService(serviceConnection);
+        if (weatherService != null) {
+            unbindService(weatherServiceConnection);
+            weatherService = null;
         }
-//        todo: service ends when Activity-onDestroy() called??
-//        stopService(serviceIntent);
-        unregisterReceiver(connectivityReceiver);
     }
 
     public void hideKeyboard(View view) {
@@ -183,43 +192,14 @@ public class MainActivity extends AppCompatActivity {
         @Override
         public void onServiceConnected(ComponentName componentName, IBinder iBinder) {
             Log.d(LOG_TAG, "onServiceConnected() called");
-            service = ((WeatherService.LocalBinder) iBinder).getService();
-            startScheduledTask();
-        }
-
-        private void startScheduledTask() {
-            tv_status_service.setText("Service On");
-            service.setScheduledTask(new TimerTask() {
-                @Override
-                public void run() {
-                    latestWeatherObj = WeatherAPI.fetchWeather();
-                    runOnUiThread(new Runnable() {
-                        @Override
-                        public void run() {
-                            if (latestWeatherObj == null) {
-                                Toast.makeText(getApplicationContext(),
-                                        "check the Weather API website, it may not work", Toast.LENGTH_SHORT).show();
-                            } else {
-                                tv_note.setText(latestWeatherObj.toString());
-                            }
-                        }
-                    });
-                    Log.d(LOG_TAG, latestWeatherObj.toString());
-
-//                    todo notification test
-                    if (latestWeatherObj.getTime_stamp_cet().equals("27.09.2019 20:00:00")) {
-                        WeatherNotification.runNotification(getApplicationContext());
-                    }
-
-                }
-            });
+            weatherService = ((WeatherService.LocalBinder) iBinder).getService();
         }
 
         // so far never called, onServiceDisconnected() is only called in extreme situations
         @Override
         public void onServiceDisconnected(ComponentName componentName) {
             Log.d(LOG_TAG, "onServiceDisconnected() called");
-            service = null;
+            weatherService = null;
         }
     }
 }
