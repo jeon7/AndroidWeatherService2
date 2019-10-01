@@ -55,8 +55,6 @@ public class MainActivity extends AppCompatActivity {
         btnEndService = findViewById(R.id.button_end_service);
 
         // ConnectivityService will register connectivityBroadcastReceiver
-        // this should be always running before weather service started
-        // in order to display internet connectivity
         Intent connectivityServiceIntent = new Intent(this, ConnectivityService.class);
         ContextCompat.startForegroundService(this, connectivityServiceIntent);
 
@@ -98,7 +96,14 @@ public class MainActivity extends AppCompatActivity {
 
         if (WeatherService.isServiceStarted()) {
 //            todo
-            stopService(weatherServiceIntent);
+            if (weatherServiceIntent != null) {
+                stopService(weatherServiceIntent);
+            } else {
+                weatherServiceIntent = new Intent(this, WeatherService.class);
+                weatherServiceIntent.putExtra("main_temp_diff", tempDiff);
+                stopService(weatherServiceIntent);
+            }
+
         }
         Log.d(LOG_TAG, "isServiceStarted()=" + WeatherService.isServiceStarted());
     }
