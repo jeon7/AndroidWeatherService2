@@ -24,10 +24,10 @@ public class MainActivity extends AppCompatActivity {
     private static boolean activityRunningForeGround = false;
     private static TextView tv_status_internet;
     private static TextView tv_status_service;
-    private static TextView tv_note;
+//    private static TextView tv_note;
     private static Button btnStartService;
     private static Button btnEndService;
-    private EditText et_temp_diff;
+    private static EditText et_temp_diff;
     private Intent weatherServiceIntent;
 
     private String tempDiff;
@@ -39,26 +39,26 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        // to remember user input (thermometer_orange difference)
+        // to remember user input (temperature difference)
         sharedPreferences = getPreferences(Context.MODE_PRIVATE);
         String spLastValue = sharedPreferences.getString(SHARED_PREFERENCE_TEMP_DIFF, "");
 
-        // show last user saved thermometer_orange difference
+        // show last user saved temperature difference
         et_temp_diff = findViewById(R.id.editText_temperature_diff);
         et_temp_diff.setText(spLastValue);
 
         tv_status_internet = findViewById(R.id.tv_status_internet);
         tv_status_service = findViewById(R.id.tv_status_service);
-        tv_note = findViewById(R.id.tv_note);
+//        tv_note = findViewById(R.id.tv_note);
 
         btnStartService = findViewById(R.id.button_start_service);
         btnEndService = findViewById(R.id.button_end_service);
 
         // ConnectivityService will register connectivityBroadcastReceiver
-        // this should be always running even before weather service started
+        // this should be always running before weather service started
         // in order to display internet connectivity
         Intent connectivityServiceIntent = new Intent(this, ConnectivityService.class);
-        ContextCompat.startForegroundService(this,connectivityServiceIntent);
+        ContextCompat.startForegroundService(this, connectivityServiceIntent);
 
         // hide keyboard when not focused on editText
         et_temp_diff.setOnFocusChangeListener(new View.OnFocusChangeListener() {
@@ -73,17 +73,17 @@ public class MainActivity extends AppCompatActivity {
 
     public void onButtonStartServiceClicked(View view) {
         Log.d(LOG_TAG, "onButtonStartServiceClicked() called");
-        et_temp_diff.setEnabled(false);
         if (ConnectivityReceiver.isConnected()) {
             tempDiff = et_temp_diff.getText().toString().trim();
             if (tempDiff.equals("")) {
                 Toast.makeText(getApplicationContext(),
-                        "type thermometer_orange difference first for notification", Toast.LENGTH_SHORT).show();
+                        "type temperature difference first for notification", Toast.LENGTH_SHORT).show();
             } else {
                 checkUpdateTempDiff();
                 weatherServiceIntent = new Intent(this, WeatherService.class);
                 weatherServiceIntent.putExtra("main_temp_diff", tempDiff);
                 ContextCompat.startForegroundService(getApplicationContext(), weatherServiceIntent);
+                et_temp_diff.setEnabled(false);
             }
         } else {
             Toast.makeText(getApplicationContext(),
@@ -97,13 +97,14 @@ public class MainActivity extends AppCompatActivity {
         Log.d(LOG_TAG, "isServiceStarted()=" + WeatherService.isServiceStarted());
 
         if (WeatherService.isServiceStarted()) {
+//            todo
             stopService(weatherServiceIntent);
         }
         Log.d(LOG_TAG, "isServiceStarted()=" + WeatherService.isServiceStarted());
     }
 
     private void checkUpdateTempDiff() {
-        // if user input (thermometer_orange differences) has new value
+        // if user input (temperature differences) has new value
         if (sharedPreferences.getString(SHARED_PREFERENCE_TEMP_DIFF, "") != tempDiff) {
             SharedPreferences.Editor editor;
             editor = sharedPreferences.edit();
@@ -131,7 +132,7 @@ public class MainActivity extends AppCompatActivity {
         Log.d(LOG_TAG, "setUI() called");
         // internet status
         if (ConnectivityReceiver.isConnected()) {
-            tv_status_internet.setText("connected to Internet");
+            tv_status_internet.setText("connected to Network Interface");
         } else {
             tv_status_internet.setText("no Internet");
         }
@@ -140,10 +141,12 @@ public class MainActivity extends AppCompatActivity {
             tv_status_service.setText("Service is on");
             btnStartService.setEnabled(false);
             btnEndService.setEnabled(true);
+            et_temp_diff.setEnabled(false);
         } else {
             tv_status_service.setText("Service is off");
             btnStartService.setEnabled(true);
             btnEndService.setEnabled(false);
+            et_temp_diff.setEnabled(true);
         }
     }
 

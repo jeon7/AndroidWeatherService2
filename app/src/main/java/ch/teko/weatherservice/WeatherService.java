@@ -23,7 +23,7 @@ public class WeatherService extends Service {
     private Handler handler;
     private Timer taskScheduler;
     private static final long TASK_DELAY = 1000;
-    private static final long TASK_PERIOD = 10000;
+    private static final long TASK_PERIOD = 20000; // Fetch weather api data every 60s. todo 20000 for test => should be 60000
     private Weather lastWeatherObj = null;
     private float userInputTempDiff;
 
@@ -39,6 +39,19 @@ public class WeatherService extends Service {
     @Override
     public void onCreate() {
         Log.d(LOG_TAG, "onCreate() called");
+        createNotificationChannel();
+        Intent notificationIntent = new Intent(this, MainActivity.class);
+        PendingIntent pendingIntent = PendingIntent.getActivity(this,
+                0, notificationIntent, 0);
+
+        android.app.Notification notification = new NotificationCompat.Builder(this, NOTIFICATION_CHANNEL_ID)
+                .setContentTitle("Weather Service")
+                .setContentText("is currently running")
+                .setSmallIcon(R.drawable.thermometer_black)
+                .setContentIntent(pendingIntent)
+                .build();
+        startForeground(2, notification);
+
         super.onCreate();
         handler = new Handler();
     }
@@ -55,14 +68,6 @@ public class WeatherService extends Service {
         if(intent == null) {
             return Service.START_STICKY;
         } else {
-            serviceStarted = true;
-            handler.post(new Runnable() {
-                @Override
-                public void run() {
-                    MainActivity.setUI();
-                }
-            });
-
             createNotificationChannel();
             Intent notificationIntent = new Intent(this, MainActivity.class);
             PendingIntent pendingIntent = PendingIntent.getActivity(this,
@@ -75,7 +80,15 @@ public class WeatherService extends Service {
                     .setContentIntent(pendingIntent)
                     .build();
 
-            startForeground(1, notification);
+            startForeground(2, notification);
+
+            serviceStarted = true;
+            handler.post(new Runnable() {
+                @Override
+                public void run() {
+                    MainActivity.setUI();
+                }
+            });
             processScheduledTask(intent);
 
             return Service.START_NOT_STICKY;
@@ -131,7 +144,7 @@ public class WeatherService extends Service {
                                 .build();
 
                         NotificationManagerCompat notificationManager = NotificationManagerCompat.from(getApplicationContext());
-                        notificationManager.notify(2, notification);
+                        notificationManager.notify(3, notification);
                     }
 
                     // and then end service
@@ -160,24 +173,24 @@ public class WeatherService extends Service {
             Weather newWeatherObj = WeatherAPI.fetchWeather();
             float lastWeatherTemp = Float.parseFloat(lastWeatherObj.getAir_temperature().trim());
             float newWeatherTemp = Float.parseFloat(newWeatherObj.getAir_temperature().trim());
-            float tempDiff = Math.round((lastWeatherTemp - newWeatherTemp)*10/10); // decrease: +, increase: -
+            float tempDiff = (lastWeatherTemp - newWeatherTemp); // decrease: +, increase: -
+            float tempDiff_round = (Math.round(tempDiff*10.0f))/10.0f;
             Log.d(LOG_TAG, "lastWeatherTemp = " + lastWeatherTemp);
             Log.d(LOG_TAG, "newWeatherTemp = " + newWeatherTemp);
-            Log.d(LOG_TAG, "tempDiff = " + tempDiff);
+            Log.d(LOG_TAG, "tempDiff = " + tempDiff_round);
             Log.d(LOG_TAG, "userInputTempDiff = " + userInputTempDiff);
 
-            if(Math.abs(tempDiff) >= userInputTempDiff) {
+            if(Math.abs(tempDiff_round) >= userInputTempDiff) {
                 // make notification for temperature fluctuation
                 String tempIncreaseDecrease = "";
-                if (tempDiff > 0) {
-                    tempIncreaseDecrease = "Temperature" + Math.abs(tempDiff) + "decreased ";
+                if (tempDiff_round > 0) {
+                    tempIncreaseDecrease = "Temperature " + Math.abs(tempDiff_round) + " decreased ";
                 } else {
-                    tempIncreaseDecrease = "Temperature" + Math.abs(tempDiff) + "increased ";
+                    tempIncreaseDecrease = "Temperature " + Math.abs(tempDiff_round) + " increased ";
                 }
 
-
                 Intent notificationIntent = new Intent(getApplicationContext(), MainActivity.class);
-                notificationIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+//                notificationIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
                 PendingIntent pendingIntent = PendingIntent.getActivity(getApplicationContext(),
                         0, notificationIntent, 0);
 
@@ -193,7 +206,7 @@ public class WeatherService extends Service {
                         .build();
 
                 NotificationManagerCompat notificationManager = NotificationManagerCompat.from(getApplicationContext());
-                notificationManager.notify(3, notification);
+                notificationManager.notify(4, notification);
             }
             lastWeatherObj = newWeatherObj;
         }
@@ -202,16 +215,15 @@ public class WeatherService extends Service {
     @Override
     public void onDestroy() {
         Log.d(LOG_TAG, "onDestroy() called");
-        taskScheduler.cancel();
-        lastWeatherObj = null;
-        serviceStarted = false;
-
         handler.post(new Runnable() {
             @Override
             public void run() {
                 MainActivity.setUI();
             }
         });
+        taskScheduler.cancel();
+        lastWeatherObj = null;
+        serviceStarted = false;
         super.onDestroy();
     }
 
