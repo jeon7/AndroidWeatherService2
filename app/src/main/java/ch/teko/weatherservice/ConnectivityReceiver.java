@@ -26,12 +26,14 @@ public class ConnectivityReceiver extends BroadcastReceiver {
                 connected = isNetworkInterfaceAvailable(context);
                 Log.d(LOG_TAG, "connected = " + connected);
 
-                handler.post(new Runnable() {
-                    @Override
-                    public void run() {
-                        MainActivity.setUI();
-                    }
-                });
+                if (MainActivity.isActivityRunningForeGround()) {
+                    handler.post(new Runnable() {
+                        @Override
+                        public void run() {
+                            MainActivity.setUI();
+                        }
+                    });
+                }
             }
         } catch (Exception e) {
             e.printStackTrace();

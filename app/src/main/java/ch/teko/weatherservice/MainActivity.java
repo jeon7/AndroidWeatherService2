@@ -1,6 +1,7 @@
 package ch.teko.weatherservice;
 
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.content.ContextCompat;
 
 import android.app.Activity;
 import android.content.Context;
@@ -20,6 +21,7 @@ public class MainActivity extends AppCompatActivity {
     private static final String LOG_TAG = "MainActivity";
     private static final String SHARED_PREFERENCE_TEMP_DIFF = "user_last_saved_temp_diff";
 
+    private static boolean activityRunningForeGround = false;
     private static TextView tv_status_internet;
     private static TextView tv_status_service;
     private static TextView tv_note;
@@ -37,11 +39,11 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        // to remember user input (temperature difference)
+        // to remember user input (thermometer_orange difference)
         sharedPreferences = getPreferences(Context.MODE_PRIVATE);
         String spLastValue = sharedPreferences.getString(SHARED_PREFERENCE_TEMP_DIFF, "");
 
-        // show last user saved temperature difference
+        // show last user saved thermometer_orange difference
         et_temp_diff = findViewById(R.id.editText_temperature_diff);
         et_temp_diff.setText(spLastValue);
 
@@ -55,8 +57,8 @@ public class MainActivity extends AppCompatActivity {
         // ConnectivityService will register connectivityBroadcastReceiver
         // this should be always running even before weather service started
         // in order to display internet connectivity
-        Intent connectivityServiceIntent = new Intent(getApplicationContext(), ConnectivityService.class);
-        startService(connectivityServiceIntent);
+        Intent connectivityServiceIntent = new Intent(this, ConnectivityService.class);
+        ContextCompat.startForegroundService(this,connectivityServiceIntent);
 
         // hide keyboard when not focused on editText
         et_temp_diff.setOnFocusChangeListener(new View.OnFocusChangeListener() {
@@ -71,17 +73,17 @@ public class MainActivity extends AppCompatActivity {
 
     public void onButtonStartServiceClicked(View view) {
         Log.d(LOG_TAG, "onButtonStartServiceClicked() called");
-        et_temp_diff.clearFocus();
+        et_temp_diff.setEnabled(false);
         if (ConnectivityReceiver.isConnected()) {
-            tempDiff = et_temp_diff.getText().toString();
+            tempDiff = et_temp_diff.getText().toString().trim();
             if (tempDiff.equals("")) {
                 Toast.makeText(getApplicationContext(),
-                        "type temperature difference first for notification", Toast.LENGTH_SHORT).show();
+                        "type thermometer_orange difference first for notification", Toast.LENGTH_SHORT).show();
             } else {
                 checkUpdateTempDiff();
                 weatherServiceIntent = new Intent(this, WeatherService.class);
                 weatherServiceIntent.putExtra("main_temp_diff", tempDiff);
-                startService(weatherServiceIntent);
+                ContextCompat.startForegroundService(getApplicationContext(), weatherServiceIntent);
             }
         } else {
             Toast.makeText(getApplicationContext(),
@@ -91,6 +93,7 @@ public class MainActivity extends AppCompatActivity {
 
     public void onButtonEndServiceClicked(View view) {
         Log.d(LOG_TAG, "onButtonEndServiceClicked() called");
+        et_temp_diff.setEnabled(true);
         Log.d(LOG_TAG, "isServiceStarted()=" + WeatherService.isServiceStarted());
 
         if (WeatherService.isServiceStarted()) {
@@ -100,7 +103,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void checkUpdateTempDiff() {
-        // if user input (temperature differences) has new value
+        // if user input (thermometer_orange differences) has new value
         if (sharedPreferences.getString(SHARED_PREFERENCE_TEMP_DIFF, "") != tempDiff) {
             SharedPreferences.Editor editor;
             editor = sharedPreferences.edit();
@@ -113,7 +116,14 @@ public class MainActivity extends AppCompatActivity {
     protected void onResume() {
         Log.d(LOG_TAG, "onResume() called");
         super.onResume();
+        activityRunningForeGround = true;
         setUI();
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+        activityRunningForeGround = false;
     }
 
     // called from MainActivity, ConnectivityReceiver, WeatherService
@@ -141,6 +151,10 @@ public class MainActivity extends AppCompatActivity {
     protected void onDestroy() {
         Log.d(LOG_TAG, "onDestroy() called");
         super.onDestroy();
+    }
+
+    public static boolean isActivityRunningForeGround() {
+        return activityRunningForeGround;
     }
 
     public void hideKeyboard(View view) {

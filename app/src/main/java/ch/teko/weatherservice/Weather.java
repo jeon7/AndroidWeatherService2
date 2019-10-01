@@ -13,10 +13,6 @@ public class Weather {
         this.air_temperature = air_temperature;
     }
 
-    public String getTime_stamp_cet() {
-        return time_stamp_cet;
-    }
-
     public String getAir_temperature() {
         return air_temperature;
     }
